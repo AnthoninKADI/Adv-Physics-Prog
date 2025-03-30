@@ -74,7 +74,6 @@ void Application::Initialize() {
 
 	scene = new Scene;
 	scene->Initialize();
-	scene->Reset();
 
 	m_models.reserve( scene->bodies.size() );
 	for ( int i = 0; i < scene->bodies.size(); i++ ) {
@@ -114,7 +113,7 @@ void Application::InitializeGLFW() {
 
 	glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
 
-	glfwWindow = glfwCreateWindow( WINDOW_WIDTH, WINDOW_HEIGHT, "Physics", nullptr, nullptr );
+	glfwWindow = glfwCreateWindow( WINDOW_WIDTH, WINDOW_HEIGHT, "Diamond Physics", nullptr, nullptr );
 
 	glfwSetWindowUserPointer( glfwWindow, this );
 	glfwSetWindowSizeCallback( glfwWindow, Application::OnWindowResized );
@@ -171,7 +170,7 @@ bool Application::InitializeVulkan() {
 	//	Vulkan Surface for GLFW Window
 	//
 	if ( VK_SUCCESS != glfwCreateWindowSurface( deviceContext.m_vkInstance, glfwWindow, nullptr, &deviceContext.m_vkSurface ) ) {
-		printf( "ERROR: Failed to create window surface\n" );
+		printf( "ERROR: Failed to create window sruface\n" );
 		assert( 0 );
 		return false;
 	}
@@ -187,7 +186,7 @@ bool Application::InitializeVulkan() {
 		printf( "ERROR: Failed to create device\n" );
 		assert( 0 );
 		return false;
-	}	
+	}
 
 	//
 	//	Create SwapChain
@@ -211,7 +210,7 @@ bool Application::InitializeVulkan() {
 		assert( 0 );
 		return false;
 	}
-	
+
 	//
 	//	Uniform Buffer
 	//
@@ -389,7 +388,7 @@ void Application::MouseMoved( float x, float y ) {
 		m_cameraPositionTheta = 3.0f;
 	}
 }
- 
+
 /*
 ====================================================
 Application::OnMouseWheelScrolled

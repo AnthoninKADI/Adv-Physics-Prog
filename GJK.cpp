@@ -1,182 +1,193 @@
 ﻿#include "GJK.h"
+#include "code/Math/Matrix.h"
 #include "Body.h"
 #include "Shape.h"
 
 int CompareSigns(float a, float b)
 {
-    if (a > 0.0f && b > 0.0f) {
-        return 1;
-    }
-    if (a < 0.0f && b < 0.0f) {
-        return 1;
-    }
-    return 0;
+	if (a > 0.0f && b > 0.0f) {
+		return 1;
+	}
+	if (a < 0.0f && b < 0.0f) {
+		return 1;
+	}
+	return 0;
 }
 
 Vec2 SignedVolume1D(const Vec3& s1, const Vec3& s2)
 {
-    // Ray from a to b
-    Vec3 ab = s2 - s1;
-    // Ray from a to origin
-    Vec3 ap = Vec3(0.0f) - s1;
-    // Projection of the origin onto the line
-    Vec3 p0 = s1 + ab * ab.Dot(ap) / ab.GetLengthSqr();
+	// Ray from a to b
+	Vec3 ab = s2 - s1;
+	// Ray from a to origin
+	Vec3 ap = Vec3(0.0f) - s1;
+	// Projection of the origin onto the line
+	Vec3 p0 = s1 + ab * ab.Dot(ap) / ab.GetLengthSqr();
 
-    // Choose the axis with the greatest difference/length
-    int idx = 0;
-    float mu_max = 0;
-    for (int i = 0; i < 3; i++) {
-        float mu = s2[i] - s1[i];
-        if (mu * mu > mu_max * mu_max) {
-            mu_max = mu;
-            idx = i;
-        }
-    }
+	// Choose the axis with the greatest difference/length
+	int idx = 0;
+	float mu_max = 0;
+	for (int i = 0; i < 3; i++) {
+		float mu = s2[i] - s1[i];
+		if (mu * mu > mu_max * mu_max) {
+			mu_max = mu;
+			idx = i;
+		}
+	}
 
-    // Project the simplex points and projected origin onto the axis with greatest length
-    const float a = s1[idx];
-    const float b = s2[idx];
-    const float p = p0[idx];
+	// Project the simplex points and projected origin onto the axis with greatest length
+	const float a = s1[idx];
+	const float b = s2[idx];
+	const float p = p0[idx];
 
-    // Get the signed distance from a to p and from p to b
-    const float C1 = p - a;
-    const float C2 = b - p;
+	// Get the signed distance from a to p and from p to b
+	const float C1 = p - a;
+	const float C2 = b - p;
 
-    // if p is between [a,b]
-    if ((p > a && p < b) || (p > b && p < a)) {
-        Vec2 lambdas;
-        lambdas[0] = C2 / mu_max;
-        lambdas[1] = C1 / mu_max;
-        return lambdas;
-    }
+	// if p is between [a,b]
+	if ((p > a && p < b) || (p > b && p < a)) {
+		Vec2 lambdas;
+		lambdas[0] = C2 / mu_max;
+		lambdas[1] = C1 / mu_max;
+		return lambdas;
+	}
 
-    // if p is on the far side of a
-    if ((a <= b && p <= a) || (a >= b && p >= a)) {
-        return Vec2(1.0f, 0.0f);
-    }
+	// if p is on the far side of a
+	if ((a <= b && p <= a) || (a >= b && p >= a)) {
+		return Vec2(1.0f, 0.0f);
+	}
 
-    // p must be on the far side of b
-    return Vec2(0.0f, 1.0f);
+	// p must be on the far side of b
+	return Vec2(0.0f, 1.0f);
 }
 
-Vec3 normal = (s2 - s1).Cross(s3 - s1);
-Vec3 p0 = normal * s1.Dot(normal) / normal.GetLengthSqr();
+Vec3 SignedVolume2D(const Vec3& s1, const Vec3& s2, const Vec3& s3)
+{
+	Vec3 normal = (s2 - s1).Cross(s3 - s1);
+	Vec3 p0 = normal * s1.Dot(normal) / normal.GetLengthSqr();
 
-// Find the axis with the greatest projected area
-int idx = 0;
-float area_max = 0;
-for (int i = 0; i < 3; i++) {
-    int j = (i + 1) % 3;
-    int k = (i + 2) % 3;
+	// Find the axis with the greatest projected area
+	int idx = 0;
+	float area_max = 0;
+	for (int i = 0; i < 3; i++) {
+		int j = (i + 1) % 3;
+		int k = (i + 2) % 3;
 
-    Vec2 a = Vec2(s1[j], s1[k]);
-    Vec2 b = Vec2(s2[j], s2[k]);
-    Vec2 c = Vec2(s3[j], s3[k]);
-    Vec2 ab = b - a;
-    Vec2 ac = c - a;
+		Vec2 a = Vec2(s1[j], s1[k]);
+		Vec2 b = Vec2(s2[j], s2[k]);
+		Vec2 c = Vec2(s3[j], s3[k]);
+		Vec2 ab = b - a;
+		Vec2 ac = c - a;
 
-    float area = ab.x * ac.y - ab.y * ac.x;
-    if (area * area > area_max * area_max) {
-        idx = i;
-        area_max = area;
-    }
+		float area = ab.x * ac.y - ab.y * ac.x;
+		if (area * area > area_max * area_max) {
+			idx = i;
+			area_max = area;
+		}
+	}
 
-// Project onto the appropriate axis
-int x = (idx + 1) % 3;
-int y = (idx + 2) % 3;
-Vec2 s[3];
-s[0] = Vec2(s1[x], s1[y]);
-s[1] = Vec2(s2[x], s2[y]);
-s[2] = Vec2(s3[x], s3[y]);
-Vec2 p = Vec2(p0[x], p0[y]);
+	// Project onto the appropriate axis
+	int x = (idx + 1) % 3;
+	int y = (idx + 2) % 3;
+	Vec2 s[3];
+	s[0] = Vec2(s1[x], s1[y]);
+	s[1] = Vec2(s2[x], s2[y]);
+	s[2] = Vec2(s3[x], s3[y]);
+	Vec2 p = Vec2(p0[x], p0[y]);
 
-// Get the sub-areas of the triangles formed from the projected origin and the edges
-Vec3 areas;
-for (int i = 0; i < 3; i++) {
-    int j = (i + 1) % 3;
-    int k = (i + 2) % 3;
+	// Get the sub-areas of the triangles formed from the projected origin and the edges
+	Vec3 areas;
+	for (int i = 0; i < 3; i++) {
+		int j = (i + 1) % 3;
+		int k = (i + 2) % 3;
 
-    Vec2 a = p;
-    Vec2 b = s[j];
-    Vec2 c = s[k];
-    Vec2 ab = b - a;
-    Vec2 ac = c - a;
+		Vec2 a = p;
+		Vec2 b = s[j];
+		Vec2 c = s[k];
+		Vec2 ab = b - a;
+		Vec2 ac = c - a;
 
-    areas[i] = ab.x * ac.y - ab.y * ac.x;
+		areas[i] = ab.x * ac.y - ab.y * ac.x;
+	}
+
+	// If the projected origin is inside the triangle, then return the barycentric points
+	if (CompareSigns(area_max, areas[0]) > 0 && CompareSigns(area_max, areas[1]) > 0 && CompareSigns(area_max, areas[2]) > 0) {
+		Vec3 lambdas = areas / area_max;
+		return lambdas;
+	}
+
+	// If we make it here, then we need to project onto the edges and determine the closest point
+	float dist = 1e10;
+	Vec3 lambdas = Vec3(1, 0, 0);
+	for (int i = 0; i < 3; i++) {
+		int k = (i + 1) % 3;
+		int l = (i + 2) % 3;
+
+		Vec3 edgesPts[3];
+		edgesPts[0] = s1;
+		edgesPts[1] = s2;
+		edgesPts[2] = s3;
+
+		Vec2 lambdaEdge = SignedVolume1D(edgesPts[k], edgesPts[l]);
+		Vec3 pt = edgesPts[k] * lambdaEdge[0] + edgesPts[l] * lambdaEdge[1];
+		if (pt.GetLengthSqr() < dist) {
+			dist = pt.GetLengthSqr();
+			lambdas[i] = 0;
+			lambdas[k] = lambdaEdge[0];
+			lambdas[l] = lambdaEdge[1];
+		}
+	}
+
+	return lambdas;
 }
 
-// If the projected origin is inside the triangle, then return the barycentric points
-if (CompareSigns(area_max, areas[0]) > 0 && CompareSigns(area_max, areas[1]) > 0 && CompareSigns(area_max, areas[2]) > 0) {
-    Vec3 lambdas = areas / area_max;
-    return lambdas;
-}
+Vec4 SignedVolume3D(const Vec3& s1, const Vec3& s2, const Vec3& s3, const Vec3& s4)
+{
+	Mat4 M;
+	M.rows[0] = Vec4(s1.x, s2.x, s3.x, s4.x);
+	M.rows[1] = Vec4(s1.y, s2.y, s3.y, s4.y);
+	M.rows[2] = Vec4(s1.z, s2.z, s3.z, s4.z);
+	M.rows[3] = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-// If we make it here, then we need to project onto the edges and determine the closest point
-float dist = 1e10;
-Vec3 lambdas = Vec3(1, 0, 0);
-for (int i = 0; i < 3; i++) {
-    int k = (i + 1) % 3;
-    int l = (i + 2) % 3;
+	Vec4 C4;
+	C4[0] = M.Cofactor(3, 0);
+	C4[1] = M.Cofactor(3, 1);
+	C4[2] = M.Cofactor(3, 2);
+	C4[3] = M.Cofactor(3, 3);
 
-    Vec3 edgesPts[3];
-    edgesPts[0] = s1;
-    edgesPts[1] = s2;
-    edgesPts[2] = s3;
+	const float detM = C4[0] + C4[1] + C4[2] + C4[3];
 
-    Vec2 lambdaEdge = SignedVolume1D(edgesPts[k], edgesPts[l]);
-    Vec3 pt = edgesPts[k] * lambdaEdge[0] + edgesPts[l] * lambdaEdge[1];
-    if (pt.GetLengthSqr() < dist) {
-        dist = pt.GetLengthSqr();
-        lambdas[i] = 0;
-        lambdas[k] = lambdaEdge[0];
-        lambdas[l] = lambdaEdge[1];
-    }
-}
+	// If the barycentric coordinates put the origin inside the simplex, then return them
+	if (CompareSigns(detM, C4[0]) > 0 && CompareSigns(detM, C4[1]) > 0 && CompareSigns(detM, C4[2]) > 0 && CompareSigns(detM, C4[3]) > 0) {
+		Vec4 lambdas = C4 * (1.0f / detM);
+		return lambdas;
+	}
 
-return lambdas;
+	// If we get here, then we need to project the origin onto the faces and determine the closest one
+	Vec4 lambdas;
+	float dist = 1e10;
+	for (int i = 0; i < 4; i++) {
+		int j = (i + 1) % 4;
+		int k = (i + 2) % 4;
 
-Mat4 M;
-M.rows[0] = Vec4(s1.x, s2.x, s3.x, s4.x);
-M.rows[1] = Vec4(s1.y, s2.y, s3.y, s4.y);
-M.rows[2] = Vec4(s1.z, s2.z, s3.z, s4.z);
-M.rows[3] = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		Vec3 facePts[4];
+		facePts[0] = s1;
+		facePts[1] = s2;
+		facePts[2] = s3;
+		facePts[3] = s4;
 
-Vec4 C4;
-C4[0] = M.Cofactor(3, 0);
-C4[1] = M.Cofactor(3, 1);
-C4[2] = M.Cofactor(3, 2);
-C4[3] = M.Cofactor(3, 3);
+		Vec3 lambdasFace = SignedVolume2D(facePts[i], facePts[j], facePts[k]);
+		Vec3 pt = facePts[i] * lambdasFace[0] + facePts[j] * lambdasFace[1] + facePts[k] * lambdasFace[2];
+		if (pt.GetLengthSqr() < dist) {
+			dist = pt.GetLengthSqr();
+			lambdas.Zero();
+			lambdas[i] = lambdasFace[0];
+			lambdas[j] = lambdasFace[1];
+			lambdas[k] = lambdasFace[2];
+		}
+	}
 
-const float detM = C4[0] + C4[1] + C4[2] + C4[3];
+	return lambdas;
 
-// If the barycentric coordinates put the origin inside the simplex, then return them
-if (CompareSigns(detM, C4[0]) > 0 && CompareSigns(detM, C4[1]) > 0 && CompareSigns(detM, C4[2]) > 0 && CompareSigns(detM, C4[3]) > 0) {
-    Vec4 lambdas = C4 * (1.0f / detM);
-    return lambdas;
-}
-
-// If we get here, then we need to project the origin onto the faces and determine the closest one
-Vec4 lambdas;
-float dist = 1e10;
-for (int i = 0; i < 4; i++) {
-    int j = (i + 1) % 4;
-    int k = (i + 2) % 4;
-
-    Vec3 facePts[4];
-    facePts[0] = s1;
-    facePts[1] = s2;
-    facePts[2] = s3;
-    facePts[3] = s4;
-
-    Vec3 lambdasFace = SignedVolume2D(facePts[i], facePts[j], facePts[k]);
-    Vec3 pt = facePts[i] * lambdasFace[0] + facePts[j] * lambdasFace[1] + facePts[k] * lambdasFace[2];
-    if (pt.GetLengthSqr() < dist) {
-        dist = pt.GetLengthSqr();
-        lambdas.Zero();
-        lambdas[i] = lambdasFace[0];
-        lambdas[j] = lambdasFace[1];
-        lambdas[k] = lambdasFace[2];
-    }
 }
 
 void TestSignedVolumeProjection() {
@@ -257,27 +268,25 @@ void TestSignedVolumeProjection() {
 	);
 }
 
-return lambdas;
+Point Support(const Body* bodyA, const Body* bodyB, Vec3 dir, const float bias) {
+	dir.Normalize();
 
-	Point Support(const Body* bodyA, const Body* bodyB, Vec3 dir, const float bias) {
-		dir.Normalize();
+	Point point;
 
-		Point point;
+	// Find the point in A furthest in direction
+	point.ptA = bodyA->shape->Support(dir, bodyA->position, bodyA->orientation, bias);
 
-		// Find the point in A furthest in direction
-		point.ptA = bodyA->shape->Support(dir, bodyA->position, bodyA->orientation, bias);
+	dir *= -1.0f;
 
-		dir *= -1.0f;
+	// Find the point in B furthest in the opposite direction
+	point.ptB = bodyB->shape->Support(dir, bodyB->position, bodyB->orientation, bias);
 
-		// Find the point in B furthest in the opposite direction
-		point.ptB = bodyB->shape->Support(dir, bodyB->position, bodyB->orientation, bias);
+	// Return the point, in the minkowski sum, furthest in the direction
+	point.xyz = point.ptA - point.ptB;
+	return point;
+}
 
-		// Return the point, in the minkowski sum, furthest in the direction
-		point.xyz = point.ptA - point.ptB;
-		return point;
-	}
-
-	bool SimplexSignedVolumes(Point* pts, const int num, Vec3& newDir, Vec4& lambdasOut)
+bool SimplexSignedVolumes(Point* pts, const int num, Vec3& newDir, Vec4& lambdasOut)
 {
 	const float epsilonf = 0.0001f * 0.0001f;
 	lambdasOut.Zero();
@@ -434,14 +443,6 @@ bool GJK_DoesIntersect(const Body* bodyA, const Body* bodyB)
 
 	return doesContainOrigin;
 }
-
-	/*
-================================================================================================
-
-Expanding Polytope Algorithm
-
-================================================================================================
-*/
 
 Vec3 BarycentricCoordinates(Vec3 s1, Vec3 s2, Vec3 s3, const Vec3& pt) {
 	s1 = s1 - pt;
@@ -764,7 +765,7 @@ float EPA_Expand(const Body* bodyA, const Body* bodyB, const float bias, const P
 	return delta.GetMagnitude();
 }
 
-	bool GJK_DoesIntersect(const Body* bodyA, const Body* bodyB, const float bias, Vec3& ptOnA, Vec3& ptOnB)
+bool GJK_DoesIntersect(const Body* bodyA, const Body* bodyB, const float bias, Vec3& ptOnA, Vec3& ptOnB)
 {
 	const Vec3 origin(0.0f);
 
@@ -875,107 +876,49 @@ float EPA_Expand(const Body* bodyA, const Body* bodyB, const float bias, const P
 	EPA_Expand(bodyA, bodyB, bias, simplexPoints, ptOnA, ptOnB);
 	return true;
 }
-	
-	void GJK_ClosestPoints(const Body* bodyA, const Body* bodyB, Vec3& ptOnA, Vec3& ptOnB)
-	{
-		const Vec3 origin(0.0f);
 
-		float closestDist = 1e10f;
-		const float bias = 0.0f;
+void GJK_ClosestPoints(const Body* bodyA, const Body* bodyB, Vec3& ptOnA, Vec3& ptOnB)
+{
+	const Vec3 origin(0.0f);
 
-		int numPts = 1;
-		Point simplexPoints[4];
-		simplexPoints[0] = Support(bodyA, bodyB, Vec3(1, 1, 1), bias);
+	float closestDist = 1e10f;
+	const float bias = 0.0f;
 
-		Vec4 lambdas = Vec4(1, 0, 0, 0);
-		Vec3 newDir = simplexPoints[0].xyz * -1.0f;
-		do {
-			// Get the new point to check on
-			Point newPt = Support(bodyA, bodyB, newDir, bias);
+	int numPts = 1;
+	Point simplexPoints[4];
+	simplexPoints[0] = Support(bodyA, bodyB, Vec3(1, 1, 1), bias);
 
-			// If the new point is the same as a previous point, then we can't expand any further
-			if (HasPoint(simplexPoints, newPt)) {
-				break;
-			}
+	Vec4 lambdas = Vec4(1, 0, 0, 0);
+	Vec3 newDir = simplexPoints[0].xyz * -1.0f;
+	do {
+		// Get the new point to check on
+		Point newPt = Support(bodyA, bodyB, newDir, bias);
 
-			// Add point and get new search direction
-			simplexPoints[numPts] = newPt;
-			numPts++;
-
-			SimplexSignedVolumes(simplexPoints, numPts, newDir, lambdas);
-			SortValids(simplexPoints, lambdas);
-			numPts = NumValids(lambdas);
-
-			// Check that the new projection of the origin onto the simplex is closer than the previous
-			float dist = newDir.GetLengthSqr();
-			if (dist >= closestDist) {
-				break;
-			}
-			closestDist = dist;
-		} while (numPts < 4);
-
-		ptOnA.Zero();
-		ptOnB.Zero();
-		for (int i = 0; i < 4; i++) {
-			ptOnA += simplexPoints[i].ptA * lambdas[i];
-			ptOnB += simplexPoints[i].ptB * lambdas[i];
-		}
-	}
-
-	bool Intersections::ConservativeAdvance(Body& bodyA, Body& bodyB, float dt, Contact& contact)
-	{
-		contact.a = &bodyA;
-		contact.b = &bodyB;
-
-		float toi = 0.0f;
-
-		int numIters = 0;
-
-		// Advance the positions of the bodies until they touch or there's not time left
-		while (dt > 0.0f) {
-			// Check for intersection
-			bool didIntersect = Intersect(&bodyA, &bodyB, contact);
-			if (didIntersect) {
-				contact.timeOfImpact = toi;
-				bodyA.Update(-toi);
-				bodyB.Update(-toi);
-				return true;
-			}
-
-			++numIters;
-			if (numIters > 10) {
-				break;
-			}
-
-			// Get the vector from the closest point on A to the closest point on B
-			Vec3 ab = contact.ptOnBWorldSpace - contact.ptOnAWorldSpace;
-			ab.Normalize();
-
-			// project the relative velocity onto the ray of shortest distance
-			Vec3 relativeVelocity = bodyA.linearVelocity - bodyB.linearVelocity;
-			float orthoSpeed = relativeVelocity.Dot(ab);
-
-			// Add to the orthoSpeed the maximum angular speeds of the relative shapes
-			float angularSpeedA = bodyA.shape->FastestLinearSpeed(bodyA.angularVelocity, ab);
-			float angularSpeedB = bodyB.shape->FastestLinearSpeed(bodyB.angularVelocity, ab * -1.0f);
-			orthoSpeed += angularSpeedA + angularSpeedB;
-			if (orthoSpeed <= 0.0f) {
-				break;
-			}
-
-			float timeToGo = contact.separationDistance / orthoSpeed;
-			if (timeToGo > dt) {
-				break;
-			}
-
-			dt -= timeToGo;
-			toi += timeToGo;
-			bodyA.Update(timeToGo);
-			bodyB.Update(timeToGo);
+		// If the new point is the same as a previous point, then we can't expand any further
+		if (HasPoint(simplexPoints, newPt)) {
+			break;
 		}
 
-		// Unwind the clock
-		bodyA.Update(-toi);
-		bodyB.Update(-toi);
-		return false;
+		// Add point and get new search direction
+		simplexPoints[numPts] = newPt;
+		numPts++;
+
+		SimplexSignedVolumes(simplexPoints, numPts, newDir, lambdas);
+		SortValids(simplexPoints, lambdas);
+		numPts = NumValids(lambdas);
+
+		// Check that the new projection of the origin onto the simplex is closer than the previous
+		float dist = newDir.GetLengthSqr();
+		if (dist >= closestDist) {
+			break;
+		}
+		closestDist = dist;
+	} while (numPts < 4);
+
+	ptOnA.Zero();
+	ptOnB.Zero();
+	for (int i = 0; i < 4; i++) {
+		ptOnA += simplexPoints[i].ptA * lambdas[i];
+		ptOnB += simplexPoints[i].ptB * lambdas[i];
 	}
+}

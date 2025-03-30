@@ -2,52 +2,48 @@
 #include "code/Math/Vector.h"
 #include <vector>
 
-#include "Contact.h"
 struct Tri;
 struct Edge;
 
-class GJK
-{
-    int CompareSigns(float a, float b);
-
-    Vec2 SignedVolume1D(const Vec3& s1, const Vec3& s2);
-
-    Vec3 SignedVolume2D(const Vec3& s1, const Vec3& s2, const Vec3& s3);
-
-    Vec4 SignedVolume3D(const Vec3& s1, const Vec3& s2, const Vec3& s3, const Vec3& s4);
-
-    void TestSignedVolumeProjection();
-    
-};
 
 class Body;
 
 struct Point
 {
-    // The point on the minkowski sum
-    Vec3 xyz;
+	// The point on the minkowski sum
+	Vec3 xyz;
 
-    // The point on bodyA
-    Vec3 ptA;
+	// The point on bodyA
+	Vec3 ptA;
 
-    // The point on bodyB
-    Vec3 ptB;
+	// The point on bodyB
+	Vec3 ptB;
 
-    Point() : xyz(0.0f), ptA(0.0f), ptB(0.0f) {}
+	Point() : xyz(0.0f), ptA(0.0f), ptB(0.0f) {}
 
-    const Point& operator = (const Point& rhs) {
-        xyz = rhs.xyz;
-        ptA = rhs.ptA;
-        ptB = rhs.ptB;
-        return *this;
-    }
+	const Point& operator = (const Point& rhs) {
+		xyz = rhs.xyz;
+		ptA = rhs.ptA;
+		ptB = rhs.ptB;
+		return *this;
+	}
 
-    bool operator == (const Point& rhs) const {
-        return ((ptA == rhs.ptA) && (ptB == rhs.ptB) && (xyz == rhs.xyz));
-    }
+	bool operator == (const Point& rhs) const {
+		return ((ptA == rhs.ptA) && (ptB == rhs.ptB) && (xyz == rhs.xyz));
+	}
 };
 
 Point Support(const Body* bodyA, const Body* bodyB, Vec3 dir, const float bias);
+
+int CompareSigns(float a, float b);
+
+Vec2 SignedVolume1D(const Vec3& s1, const Vec3& s2);
+
+Vec3 SignedVolume2D(const Vec3& s1, const Vec3& s2, const Vec3& s3);
+
+Vec4 SignedVolume3D(const Vec3& s1, const Vec3& s2, const Vec3& s3, const Vec3& s4);
+
+void TestSignedVolumeProjection();
 
 // Projects the origin onto the simplex to acquire the new search direction,
 // also checks if the origin is "inside" the simplex.
@@ -82,6 +78,4 @@ float EPA_Expand(const Body* bodyA, const Body* bodyB, const float bias, const P
 
 bool GJK_DoesIntersect(const Body* bodyA, const Body* bodyB, const float bias, Vec3& ptOnA, Vec3& ptOnB);
 
-bool GJK_DoesIntersect(const Body* bodyA, const Body* bodyB, const float bias, Vec3& ptOnA, Vec3& ptOnB);
-
-static bool ConservativeAdvance(Body& bodyA, Body& bodyB, float dt, Contact& contact);
+void GJK_ClosestPoints(const Body* bodyA, const Body* bodyB, Vec3& ptOnA, Vec3& ptOnB);

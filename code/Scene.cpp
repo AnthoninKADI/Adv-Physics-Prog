@@ -1,111 +1,7 @@
-//
-//  Scene.cpp
-//
 #include "Scene.h"
 #include "../Shape.h"
 #include "../Intersections.h"
 #include "../Broadphase.h"
-
-Vec3 g_diamond[7 * 8];
-void FillDiamond()
-{
-	Vec3 pts[4 + 4];
-	pts[0] = Vec3(0.1f, 0, -1);
-	pts[1] = Vec3(1, 0, 0);
-	pts[2] = Vec3(1, 0, 0.1f);
-	pts[3] = Vec3(0.4f, 0, 0.4f);
-
-	const float pi = acosf(-1.0f);
-	const Quat quatHalf(Vec3(0, 0, 1), 2.0f * pi * 0.125f * 0.5f);
-	pts[4] = Vec3(0.8f, 0, 0.3f);
-	pts[4] = quatHalf.RotatePoint(pts[4]);
-	pts[5] = quatHalf.RotatePoint(pts[1]);
-	pts[6] = quatHalf.RotatePoint(pts[2]);
-
-	const Quat quat(Vec3(0, 0, 1), 2.0f * pi * 0.125f);
-	int idx = 0;
-	for (int i = 0; i < 7; i++) {
-		g_diamond[idx] = pts[i];
-		idx++;
-	}
-
-	Quat quatAccumulator;
-	for (int i = 1; i < 8; i++) {
-		quatAccumulator = quatAccumulator * quat;
-		for (int pt = 0; pt < 7; pt++) {
-			g_diamond[idx] = quatAccumulator.RotatePoint(pts[pt]);
-			idx++;
-		}
-	}
-}
-
-/*
-========================================================================================================
-
-Scene
-
-========================================================================================================
-*/
-
-/*
-====================================================
-Scene::~Scene
-====================================================
-*/
-Scene::~Scene() {
-	for (int i = 0; i < bodies.size(); i++) {
-		delete bodies[i].shape;
-	}
-	bodies.clear();
-}
-
-void Scene::Initialize() {
-	Body body;
-
-	body.position = Vec3(10, 0, 3);
-	body.orientation = Quat(0, 0, 0, 1);
-	body.linearVelocity = Vec3(-100, 0, 0);
-	body.angularVelocity = Vec3(0.0f, 0.0f, 0.0f);
-	body.inverseMass = 1.0f;
-	body.elasticity = 0.5f;
-	body.friction = 0.5f;
-	body.shape = new ShapeSphere(0.5f);
-	bodies.push_back(body);
-
-	body.position = Vec3(-10, 0, 3);
-	body.orientation = Quat(0, 0, 0, 1);
-	body.linearVelocity = Vec3(100, 0, 0);
-	body.angularVelocity = Vec3(0, 10, 0);
-	body.inverseMass = 1.0f;
-	body.elasticity = 0.5f;
-	body.friction = 0.5f;
-	body.shape = new ShapeConvex(g_diamond, sizeof(g_diamond) / sizeof(Vec3));
-	bodies.push_back(body);
-
-	AddStandardSandBox(bodies);
-}
-
-/*
-====================================================
-Scene::Reset
-====================================================
-*/
-void Scene::Reset() {
-	for (int i = 0; i < bodies.size(); i++) {
-		delete bodies[i].shape;
-	}
-	bodies.clear();
-
-	Initialize();
-}
-
-/*
-========================================================================================================
-
-Models
-
-========================================================================================================
-*/
 
 static const float w = 50;
 static const float h = 25;
@@ -236,38 +132,6 @@ Vec3 g_boxHead[] = {
 	Vec3(h2, h2, h2),
 };
 
-Vec3 g_diamond[7 * 8];
-void FillDiamond() {
-	Vec3 pts[4 + 4];
-	pts[0] = Vec3(0.1f, 0, -1);
-	pts[1] = Vec3(1, 0, 0);
-	pts[2] = Vec3(1, 0, 0.1f);
-	pts[3] = Vec3(0.4f, 0, 0.4f);
-
-	const float pi = acosf(-1.0f);
-	const Quat quatHalf(Vec3(0, 0, 1), 2.0f * pi * 0.125f * 0.5f);
-	pts[4] = Vec3(0.8f, 0, 0.3f);
-	pts[4] = quatHalf.RotatePoint(pts[4]);
-	pts[5] = quatHalf.RotatePoint(pts[1]);
-	pts[6] = quatHalf.RotatePoint(pts[2]);
-
-	const Quat quat(Vec3(0, 0, 1), 2.0f * pi * 0.125f);
-	int idx = 0;
-	for (int i = 0; i < 7; i++) {
-		g_diamond[idx] = pts[i];
-		idx++;
-	}
-
-	Quat quatAccumulator;
-	for (int i = 1; i < 8; i++) {
-		quatAccumulator = quatAccumulator * quat;
-		for (int pt = 0; pt < 7; pt++) {
-			g_diamond[idx] = quatAccumulator.RotatePoint(pts[pt]);
-			idx++;
-		}
-	}
-}
-
 void AddStandardSandBox(std::vector<Body>& bodies) {
 	Body body;
 
@@ -322,13 +186,55 @@ void AddStandardSandBox(std::vector<Body>& bodies) {
 	bodies.push_back(body);
 }
 
+Vec3 g_diamond[7 * 8];
 
+void FillDiamond()
+{
+	Vec3 pts[4 + 4];
+	pts[0] = Vec3(0.1f, 0, -1);
+	pts[1] = Vec3(1, 0, 0);
+	pts[2] = Vec3(1, 0, 0.1f);
+	pts[3] = Vec3(0.4f, 0, 0.4f);
 
-/*
-====================================================
-Scene::Initialize
-====================================================
-*/
+	const float pi = acosf(-1.0f);
+	const Quat quatHalf(Vec3(0, 0, 1), 2.0f * pi * 0.125f * 0.5f);
+	pts[4] = Vec3(0.8f, 0, 0.3f);
+	pts[4] = quatHalf.RotatePoint(pts[4]);
+	pts[5] = quatHalf.RotatePoint(pts[1]);
+	pts[6] = quatHalf.RotatePoint(pts[2]);
+
+	const Quat quat(Vec3(0, 0, 1), 2.0f * pi * 0.125f);
+	int idx = 0;
+	for (int i = 0; i < 7; i++) {
+		g_diamond[idx] = pts[i];
+		idx++;
+	}
+
+	Quat quatAccumulator;
+	for (int i = 1; i < 8; i++) {
+		quatAccumulator = quatAccumulator * quat;
+		for (int pt = 0; pt < 7; pt++) {
+			g_diamond[idx] = quatAccumulator.RotatePoint(pts[pt]);
+			idx++;
+		}
+	}
+}
+
+Scene::~Scene() {
+	for ( int i = 0; i < bodies.size(); i++ ) {
+		delete bodies[ i ].shape;
+	}
+	bodies.clear();
+}
+
+void Scene::Reset() {
+	for ( int i = 0; i < bodies.size(); i++ ) {
+		delete bodies[ i ].shape;
+	}
+	bodies.clear();
+
+	Initialize();
+}
 
 void Scene::Initialize() {
 	Body body;
@@ -343,31 +249,35 @@ void Scene::Initialize() {
 	body.shape = new ShapeSphere(0.5f);
 	bodies.push_back(body);
 
+	body.position = Vec3(-10, 0, 3);
+	body.orientation = Quat(0, 0, 0, 1);
+	body.linearVelocity = Vec3(100, 0, 0);
+	body.angularVelocity = Vec3(0, 10, 0);
+	body.inverseMass = 1.0f;
+	body.elasticity = 0.5f;
+	body.friction = 0.5f;
+	body.shape = new ShapeConvex(g_diamond, sizeof(g_diamond) / sizeof(Vec3));
+	bodies.push_back(body);
+
 	AddStandardSandBox(bodies);
 }
 
-/*
-====================================================
-Scene::Update
-====================================================
-*/
-void Scene::Update(const float dt_sec) 
+void Scene::Update(const float dt_sec)
 {
 	// Gravity
-	for (int i = 0; i < bodies.size(); ++i) 
+	for (int i = 0; i < bodies.size(); ++i)
 	{
 		Body& body = bodies[i];
 		float mass = 1.0f / body.inverseMass;
 		// Gravity needs to be an impulse I
-		// I == dp, so F == dp/dt <=> dp = F * dt <=> I = F * dt <=> I = m * g * dt
+		// I == dp, so F == dp/dt <=> dp = F * dt
+		// <=> I = F * dt <=> I = m * g * dt
 		Vec3 impulseGravity = Vec3(0, 0, -10) * mass * dt_sec;
 		body.ApplyImpulseLinear(impulseGravity);
 	}
-
 	// Broadphase
 	std::vector<CollisionPair> collisionPairs;
 	BroadPhase(bodies.data(), bodies.size(), collisionPairs, dt_sec);
-
 	// Collision checks (Narrow phase)
 	int numContacts = 0;
 	const int maxContacts = bodies.size() * bodies.size();
@@ -377,39 +287,40 @@ void Scene::Update(const float dt_sec)
 		const CollisionPair& pair = collisionPairs[i];
 		Body& bodyA = bodies[pair.a];
 		Body& bodyB = bodies[pair.b];
-
-		if (bodyA.inverseMass == 0.0f && bodyB.inverseMass == 0.0f) continue;
-
+		if (bodyA.inverseMass == 0.0f && bodyB.inverseMass == 0.0f)
+			continue;
 		Contact contact;
-		if (Intersections::Intersect(bodyA, bodyB, dt_sec, contact))
+		if (Intersections::Intersect(bodyA,bodyB, dt_sec, contact))
 		{
 			contacts[numContacts] = contact;
 			++numContacts;
 		}
 	}
-
 	// Sort times of impact
 	if (numContacts > 1) {
-		qsort(contacts, numContacts, sizeof(Contact), Contact::CompareContact);
+		qsort(contacts, numContacts, sizeof(Contact),
+		Contact::CompareContact);
 	}
-
 	// Contact resolve in order
+	
 	float accumulatedTime = 0.0f;
-	for (int i = 0; i < numContacts; ++i) 
+	for (int i = 0; i < numContacts; ++i)
 	{
 		Contact& contact = contacts[i];
 		const float dt = contact.timeOfImpact - accumulatedTime;
-
+		Body* bodyA = contact.a;
+		Body* bodyB = contact.b;
+		// Skip body par with infinite mass
+		if (bodyA->inverseMass == 0.0f && bodyB->inverseMass == 0.0f)
+			continue;
 		// Position update
 		for (int j = 0; j < bodies.size(); ++j) {
 			bodies[j].Update(dt);
 		}
-
 		Contact::ResolveContact(contact);
 		accumulatedTime += dt;
 	}
-
-	// Other physics behavirous, outside collisions. 
+	// Other physics behavirous, outside collisions.
 	// Update the positions for the rest of this frame's time.
 	const float timeRemaining = dt_sec - accumulatedTime;
 	if (timeRemaining > 0.0f)

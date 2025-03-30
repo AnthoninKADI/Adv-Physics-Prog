@@ -11,6 +11,9 @@
 Scene
 ====================================================
 */
+extern Vec3 g_diamond[7 * 8];
+void FillDiamond();
+
 class Scene {
 public:
 	Scene() { bodies.reserve( 128 ); }
@@ -22,4 +25,3 @@ public:
 
 	std::vector<Body> bodies;
 };
-

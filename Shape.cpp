@@ -1,12 +1,5 @@
 #include "Shape.h"
-
-#include "ShapeUtils.h"
 #include "code/Math/Matrix.h"
-
-Vec3 ShapeSphere::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias)
-{
-	return pos + dir * (radius + bias);
-}
 
 Mat3 ShapeSphere::InertiaTensor() const
 {
@@ -15,6 +8,7 @@ Mat3 ShapeSphere::InertiaTensor() const
 	tensor.rows[0][0] = 2.0f * radius * radius / 5.0f;
 	tensor.rows[1][1] = 2.0f * radius * radius / 5.0f;
 	tensor.rows[2][2] = 2.0f * radius * radius / 5.0f;
+
 	return tensor;
 }
 
@@ -34,9 +28,25 @@ Bounds ShapeSphere::GetBounds() const
 	return tmp;
 }
 
-Vec3 ShapeSphere::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias) const
+void ShapeBox::Build(const Vec3* pts, const int num)
 {
-	return pos + dir * (radius + bias);
+	for (int i = 0; i < num; ++i)
+	{
+		bounds.Expand(pts[i]);
+	}
+
+	points.clear();
+	points.push_back(Vec3{ bounds.mins.x, bounds.mins.y, bounds.mins.z });
+	points.push_back(Vec3{ bounds.maxs.x, bounds.mins.y, bounds.mins.z });
+	points.push_back(Vec3{ bounds.mins.x, bounds.maxs.y, bounds.mins.z });
+	points.push_back(Vec3{ bounds.mins.x, bounds.mins.y, bounds.maxs.z });
+
+	points.push_back(Vec3{ bounds.maxs.x, bounds.maxs.y, bounds.maxs.z });
+	points.push_back(Vec3{ bounds.mins.x, bounds.maxs.y, bounds.maxs.z });
+	points.push_back(Vec3{ bounds.maxs.x, bounds.mins.y, bounds.maxs.z });
+	points.push_back(Vec3{ bounds.maxs.x, bounds.maxs.y, bounds.mins.z });
+
+	centerOfMass = (bounds.maxs + bounds.mins) * 0.5f;
 }
 
 Mat3 ShapeBox::InertiaTensor() const
@@ -101,48 +111,6 @@ Bounds ShapeBox::GetBounds() const
 	return bounds;
 }
 
-void ShapeBox::Build(const Vec3* pts, const int num)
-{
-	for (int i = 0; i < num; ++i)
-	{
-		bounds.Expand(pts[i]);
-	}
-
-	points.clear();
-	points.push_back(Vec3{ bounds.mins.x, bounds.mins.y, bounds.mins.z });
-	points.push_back(Vec3{ bounds.maxs .x, bounds.mins.y, bounds.mins.z });
-	points.push_back(Vec3{ bounds.mins.x, bounds.maxs.y, bounds.mins.z });
-	points.push_back(Vec3{ bounds.mins.x, bounds.mins.y, bounds.maxs.z });
-
-	points.push_back(Vec3{ bounds.maxs.x, bounds.maxs.y, bounds.maxs.z });
-	points.push_back(Vec3{ bounds.mins.x, bounds.maxs.y, bounds.maxs.z });
-	points.push_back(Vec3{ bounds.maxs.x, bounds.mins.y, bounds.maxs.z });
-	points.push_back(Vec3{ bounds.maxs.x, bounds.maxs.y, bounds.mins.z });
-
-	centerOfMass = (bounds.maxs + bounds.mins) * 0.5f;
-}
-
-Vec3 ShapeBox::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias) const
-{
-	// Find the point in furthest direction
-	Vec3 maxPt = orient.RotatePoint(points[0]) + pos;
-	float maxDist = dir.Dot(maxPt);
-	for (int i = 1; i < points.size(); i++) {
-		const Vec3 pt = orient.RotatePoint(points[i]) + pos;
-		const float dist = dir.Dot(pt);
-
-		if (dist > maxDist) {
-			maxDist = dist;
-			maxPt = pt;
-		}
-	}
-
-	Vec3 norm = dir;
-	norm.Normalize();
-	norm *= bias;
-	return maxPt + norm;
-}
-
 float ShapeBox::FastestLinearSpeed(const Vec3& angularVelocity, const Vec3& dir) const
 {
 	float maxSpeed{ 0 };
@@ -181,6 +149,57 @@ Bounds ShapeConvex::GetBounds(const Vec3& pos, const Quat& orient) const
 Bounds ShapeConvex::GetBounds() const
 {
 	return bounds;
+}
+
+Mat3 ShapeConvex::InertiaTensor() const
+{
+	return inertiaTensor;
+}
+
+float ShapeConvex::FastestLinearSpeed(const Vec3& angularVelocity, const Vec3& dir) const
+{
+	float maxSpeed{ 0 };
+	for (int i = 1; i < points.size(); i++) {
+		Vec3 r = points[i] - centerOfMass;
+		Vec3 linearVelocity = angularVelocity.Cross(r);
+		float speed = dir.Dot(linearVelocity);
+		if (speed > maxSpeed) {
+			maxSpeed = speed;
+		}
+	}
+	return maxSpeed;
+}
+
+Vec3 ShapeConvex::CalculateCenterOfMass(const std::vector<Vec3>& pts, const std::vector<Tri>& tris)
+{
+	const int numSamples = 100;
+
+	Bounds bounds;
+	bounds.Expand(pts.data(), pts.size());
+
+	Vec3 cm(0.0f);
+	const float dx = bounds.WidthX() / (float)numSamples;
+	const float dy = bounds.WidthY() / (float)numSamples;
+	const float dz = bounds.WidthZ() / (float)numSamples;
+
+	int sampleCount = 0;
+	for (float x = bounds.mins.x; x < bounds.maxs.x; x += dx) {
+		for (float y = bounds.mins.y; y < bounds.maxs.y; y += dy) {
+			for (float z = bounds.mins.z; z < bounds.maxs.z; z += dz) {
+				Vec3 pt(x, y, z);
+
+				if (IsExternal(pts, tris, pt)) {
+					continue;
+				}
+
+				cm += pt;
+				sampleCount++;
+			}
+		}
+	}
+
+	cm /= (float)sampleCount;
+	return cm;
 }
 
 Mat3 ShapeConvex::CalculateInertiaTensor(const std::vector<Vec3>& pts, const std::vector<Tri>& tris, const Vec3& cm)
@@ -231,44 +250,6 @@ Mat3 ShapeConvex::CalculateInertiaTensor(const std::vector<Vec3>& pts, const std
 	return tensor;
 }
 
-Vec3 ShapeConvex::CalculateCenterOfMass(const std::vector<Vec3>& pts, const std::vector<Tri>& tris)
-{
-	const int numSamples = 100;
-
-	Bounds bounds;
-	bounds.Expand(pts.data(), pts.size());
-
-	Vec3 cm(0.0f);
-	const float dx = bounds.WidthX() / (float)numSamples;
-	const float dy = bounds.WidthY() / (float)numSamples;
-	const float dz = bounds.WidthZ() / (float)numSamples;
-
-	int sampleCount = 0;
-	for (float x = bounds.mins.x; x < bounds.maxs.x; x += dx) {
-		for (float y = bounds.mins.y; y < bounds.maxs.y; y += dy) {
-			for (float z = bounds.mins.z; z < bounds.maxs.z; z += dz) {
-				Vec3 pt(x, y, z);
-
-				if (IsExternal(pts, tris, pt)) {
-					continue;
-				}
-
-				cm += pt;
-				sampleCount++;
-			}
-		}
-	}
-
-	cm /= (float)sampleCount;
-	return cm;
-}
-
-
-Mat3 ShapeConvex::InertiaTensor() const
-{
-	return inertiaTensor;
-}
-
 void ShapeConvex::Build(const Vec3* pts, const int num)
 {
 	points.clear();
@@ -292,6 +273,32 @@ void ShapeConvex::Build(const Vec3* pts, const int num)
 	inertiaTensor = CalculateInertiaTensor(hullPoints, hullTriangles, centerOfMass);
 }
 
+Vec3 ShapeSphere::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias) const
+{
+	return pos + dir * (radius + bias);
+}
+
+Vec3 ShapeBox::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias) const
+{
+	// Find the point in furthest direction
+	Vec3 maxPt = orient.RotatePoint(points[0]) + pos;
+	float maxDist = dir.Dot(maxPt);
+	for (int i = 1; i < points.size(); i++) {
+		const Vec3 pt = orient.RotatePoint(points[i]) + pos;
+		const float dist = dir.Dot(pt);
+
+		if (dist > maxDist) {
+			maxDist = dist;
+			maxPt = pt;
+		}
+	}
+
+	Vec3 norm = dir;
+	norm.Normalize();
+	norm *= bias;
+	return maxPt + norm;
+}
+
 Vec3 ShapeConvex::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, const float bias) const
 {
 	// Find the point in furthest in direction
@@ -313,20 +320,3 @@ Vec3 ShapeConvex::Support(const Vec3& dir, const Vec3& pos, const Quat& orient, 
 
 	return maxPt + norm;
 }
-
-float ShapeConvex::FastestLinearSpeed(const Vec3& angularVelocity, const Vec3& dir) const
-{
-	float maxSpeed{ 0 };
-	for (int i = 1; i < points.size(); i++) {
-		Vec3 r = points[i] - centerOfMass;
-		Vec3 linearVelocity = angularVelocity.Cross(r);
-		float speed = dir.Dot(linearVelocity);
-		if (speed > maxSpeed) {
-			maxSpeed = speed;
-		}
-	}
-	return maxSpeed;
-}
-
-
-
