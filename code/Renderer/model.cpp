@@ -408,7 +408,7 @@ bool Model::BuildFromShape(const Shape* shape) {
 		}
 	}
 
-	/*
+	
 	else if (shape->GetType() == Shape::ShapeType::SHAPE_BOX) {
 		const ShapeBox* shapeBox = (const ShapeBox*)shape;
 
@@ -488,7 +488,7 @@ bool Model::BuildFromShape(const Shape* shape) {
 			m_indices.push_back(hullTris[i].c);
 		}
 	}
-		*/
+		
 	return true;
 
 }
